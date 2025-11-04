@@ -2,7 +2,7 @@
 session_start();
 include 'auth.php'; // ตรวจสอบสิทธิ์ก่อน
 
-// ✅ ตรวจสอบสิทธิ์ (คุณสามารถเพิ่มระบบตรวจว่าเป็น admin ได้ภายหลัง)
+// ตรวจสอบสิทธิ์ (คุณสามารถเพิ่มระบบตรวจว่าเป็น admin ได้ภายหลัง)
 $orders = mysqli_query($db, "
     SELECT o.*, u.fullname 
     FROM orders o 

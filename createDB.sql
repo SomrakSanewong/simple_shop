@@ -86,3 +86,46 @@ CREATE TABLE reviews (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+
+SELECT id, name, stock, price 
+FROM products
+ORDER BY stock ASC
+LIMIT 10;
+
+SELECT o.id, u.email AS user_email, o.total_price, o.status, o.created_at
+FROM orders o
+JOIN users u ON o.user_id = u.id
+ORDER BY o.created_at DESC
+LIMIT 5;
+
+ALTER TABLE orders MODIFY status VARCHAR(20) NOT NULL DEFAULT 'Pending';
+
+-- โปรโมชั่น
+CREATE TABLE promotions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    type ENUM('fixed','percentage') NOT NULL,
+    value DECIMAL(10,2) NOT NULL,
+    expiry_date DATE NOT NULL,
+    status ENUM('Active','Inactive') DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- รายการโปรด
+CREATE TABLE wishlist (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    product_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY (user_id, product_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+SELECT p.id, p.name, COUNT(w.product_id) AS total_added
+FROM wishlist w
+JOIN products p ON w.product_id = p.id
+GROUP BY w.product_id
+ORDER BY total_added DESC
+LIMIT 10;

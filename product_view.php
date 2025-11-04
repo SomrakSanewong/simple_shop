@@ -22,9 +22,20 @@ if (!$product) {
     exit;
 }
 
+$categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
+
+// ตรวจสอบสถานะ Wishlist
+$isLoggedIn = isset($_SESSION['user']['id']);
+$user_id = $_SESSION['user']['id'] ?? null;
+$in_wishlist = false;
+
+if ($isLoggedIn) {
+    $check = mysqli_query($db, "SELECT 1 FROM wishlist WHERE user_id=$user_id AND product_id=$product_id");
+    $in_wishlist = mysqli_num_rows($check) > 0;
+}
+
 // เพิ่มรีวิว (เฉพาะผู้ใช้ที่ล็อกอิน)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user']['id'])) {
-    $user_id = $_SESSION['user']['id'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user']['id']) && isset($_POST['rating'])) {
     $rating = (int)$_POST['rating'];
     $comment = trim($_POST['comment']);
 
@@ -33,12 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user']['id'])) {
         mysqli_stmt_bind_param($stmt, "iiis", $product_id, $user_id, $rating, $comment);
         mysqli_stmt_execute($stmt);
 
-        header("Location: my_orders.php?reviewed=success");
+        header("Location: product_view.php?id=$product_id&reviewed=success");
         exit;
     }
 }
 
-// ดึงรีวิวทั้งหมดของสินค้านี้ (ใช้ email แทนชื่อ)
+// ดึงรีวิวทั้งหมดของสินค้านี้
 $reviews_result = mysqli_query($db, "
     SELECT r.*, u.fullname AS user_name
     FROM reviews r
@@ -57,7 +68,9 @@ $avg_data = mysqli_fetch_assoc($avg_result);
 $avg_rating = is_null($avg_data['avg_rating']) ? 0 : round($avg_data['avg_rating'], 1);
 $total_reviews = (int)$avg_data['total_reviews'];
 
+
 $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
+
 
 ?>
 <!DOCTYPE html>
@@ -67,26 +80,51 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($product['name']); ?></title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 
 <body>
     <?php include 'frontend_nav.php'; ?>
 
     <div class="container">
-        <h2><?= htmlspecialchars($product['name']); ?></h2>
+        <div class="product-header">
+            <h2><?= htmlspecialchars($product['name']); ?></h2>
+            <div class="avg-box">
+                <strong>คะแนนเฉลี่ย:</strong> <?= $avg_rating; ?>/5
+                (จาก <?= $total_reviews; ?> รีวิว)
+            </div>
+        </div>
+
         <img src="<?= htmlspecialchars($product['image_url']); ?>" width="200" alt="<?= htmlspecialchars($product['name']); ?>">
         <p>ราคา: <?= number_format($product['price'], 2); ?> บาท</p>
         <p><?= nl2br(htmlspecialchars($product['description'])); ?></p>
-
-        <div class="avg-box">
-            <strong>คะแนนเฉลี่ย:</strong> <?= $avg_rating; ?>/5
-            (จาก <?= $total_reviews; ?> รีวิว)
+        <hr>
+        <div>
+            <?php if ($isLoggedIn): ?>
+                <form action="wishlist_process.php" method="post" style="display:inline-block;">
+                    <input type="hidden" name="product_id" value="<?= $product_id; ?>">
+                    <?php if ($in_wishlist): ?>
+                        <button type="submit" name="remove" class="wishlist-btn remove">
+                            <i class="fa-solid fa-heart"></i> 
+                        </button> <?php else: ?>
+                        <button type="submit" name="add" class="wishlist-btn">
+                            <i class="fa-regular fa-heart"></i> 
+                        </button>
+                    <?php endif; ?>
+                </form>
+            <?php else: ?>
+                <p style="color:red;">
+                    <a href="login.php">เข้าสู่ระบบ</a> เพื่อเพิ่มสินค้านี้ใน Wishlist
+                </p>
+            <?php endif; ?>
         </div>
+        <hr>
 
         <?php if (isset($_SESSION['user']['id'])): ?>
             <h3>เขียนรีวิวของคุณ</h3>
             <form method="post">
-                <label>ให้คะแนน (1-5):</label>
+                <label>ให้คะแนน (1-5) </label>
                 <select name="rating" required>
                     <option value="">-- เลือกคะแนน --</option>
                     <option value="5">5</option>
@@ -104,7 +142,7 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
         <?php endif; ?>
 
         <hr>
-        
+
         <h3>รีวิวจากลูกค้า</h3>
         <?php if ($total_reviews == 0): ?>
             <p>ยังไม่มีรีวิวสำหรับสินค้านี้</p>

@@ -25,10 +25,13 @@
             <li style="float: right;"><a href="profile.php">Profile</a></li>
             <li style="float: right;"><a href="cart_view.php">Cart (<?php echo $cart_count; ?>)</a></li>
             <li style="float: right;"><a href="my_orders.php">History</a></li>
+            <li style="float: right;"><a href="my_wishlist.php">Wishlist</a></li>
         <?php else: ?>
             <li style="float: right;"><a href="admin/index.php" target="_blank">Admin Login</a></li>
             <li style="float: right;"><a href="login.php">Login</a></li>
             <li style="float: right;"><a href="cart_view.php">Cart (<?php echo $cart_count; ?>)</a></li>
+            <li style="float: right;"><a href="my_wishlist.php">Wishlist</a></li>
+
         <?php endif; ?>
     </ul>
 </nav>

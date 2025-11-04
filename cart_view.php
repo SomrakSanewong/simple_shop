@@ -4,7 +4,11 @@ include 'db.php';
 
 $cart_products = [];
 $total_price = 0;
+$discount = 0;
+$promo = null;
+$message = "";
 
+// โหลดข้อมูลสินค้าในตะกร้า
 if (!empty($_SESSION['cart'])) {
     $ids = array_map('intval', array_keys($_SESSION['cart']));
     $id_list = implode(',', $ids);
@@ -18,13 +22,42 @@ if (!empty($_SESSION['cart'])) {
 }
 
 $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
+
+// ตรวจสอบโค้ดส่วนลด
+if (isset($_POST['apply_code'])) {
+    $code = trim($_POST['promo_code']);
+    $stmt = mysqli_prepare($db, "
+        SELECT * FROM promotions 
+        WHERE code = ? 
+          AND status = 'Active' 
+          AND expiry_date >= CURDATE()
+        LIMIT 1
+    ");
+    mysqli_stmt_bind_param($stmt, "s", $code);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $promo = mysqli_fetch_assoc($result);
+
+    if ($promo) {
+        $_SESSION['promo'] = $promo;
+        $message = "ใช้โค้ดส่วนลดสำเร็จ: " . htmlspecialchars($promo['code']);
+    } else {
+        unset($_SESSION['promo']);
+        $message = "โค้ดส่วนลดไม่ถูกต้อง หรือหมดอายุแล้ว";
+    }
+}
+
+// โหลดโค้ดส่วนลดจาก Session ถ้ามี
+if (!empty($_SESSION['promo'])) {
+    $promo = $_SESSION['promo'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
 
 <head>
     <meta charset="UTF-8">
-    <title>Shopping Cart</title>
+    <title>ตะกร้าสินค้า</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -33,6 +66,12 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
 
     <div class="container">
         <h2>ตะกร้าสินค้า</h2>
+
+        <?php if (!empty($message)): ?>
+            <p style="color:<?= (strpos($message, 'สำเร็จ') !== false) ? 'green' : 'red'; ?>;">
+                <?= $message; ?>
+            </p>
+        <?php endif; ?>
 
         <?php if (!empty($_SESSION['cart_error'])): ?>
             <div style="color:red; margin-bottom:10px;">
@@ -76,32 +115,58 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
                             }
                             ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($product['name']); ?></td>
-                                <td><?php echo number_format($price, 2); ?></td>
+                                <td><?= htmlspecialchars($product['name']); ?></td>
+                                <td><?= number_format($price, 2); ?></td>
                                 <td>
                                     <?php if (!empty($_SESSION['cart_outofstock'][$id])): ?>
                                         <span style="color:red;">สินค้าหมด</span>
                                     <?php else: ?>
-                                        <input type="number" name="quantities[<?php echo $id; ?>]"
-                                               value="<?php echo $quantity; ?>" min="1"
+                                        <input type="number" name="quantities[<?= $id; ?>]" 
+                                               value="<?= $quantity; ?>" min="1"
                                                style="width:60px; text-align:center;">
                                     <?php endif; ?>
                                 </td>
-                                <td><?php echo number_format($subtotal, 2); ?></td>
+                                <td><?= number_format($subtotal, 2); ?></td>
                                 <td>
-                                    <a href="cart_process.php?remove=<?php echo $id; ?>"
+                                    <a href="cart_process.php?remove=<?= $id; ?>" 
                                        class="btn btn-danger"
                                        onclick="return confirm('ลบสินค้านี้ออกจากตะกร้า?');">ลบ</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+
+                    <?php
+                    // คำนวณส่วนลด
+                    if ($promo) {
+                        if ($promo['type'] === 'fixed') {
+                            $discount = min($promo['value'], $total_price);
+                        } elseif ($promo['type'] === 'percentage') {
+                            $discount = ($total_price * $promo['value']) / 100;
+                        }
+                    }
+                    $final_total = $total_price - $discount;
+                    ?>
+
                     <tfoot>
                         <tr>
                             <th colspan="3" style="text-align:center;">ยอดรวมทั้งหมด:</th>
-                            <th><?php echo number_format($total_price, 2); ?></th>
+                            <th><?= number_format($total_price, 2); ?></th>
                             <th></th>
                         </tr>
+
+                        <?php if ($promo): ?>
+                            <tr>
+                                <th colspan="3" style="text-align:center;">ส่วนลด (<?= htmlspecialchars($promo['code']); ?>):</th>
+                                <th>-<?= number_format($discount, 2); ?></th>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th colspan="3" style="text-align:center;">ยอดสุทธิหลังหักส่วนลด:</th>
+                                <th><?= number_format($final_total, 2); ?></th>
+                                <th></th>
+                            </tr>
+                        <?php endif; ?>
                     </tfoot>
                 </table>
 
@@ -115,6 +180,14 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
                         <a href="checkout.php" class="btn">ดำเนินการสั่งซื้อ</a>
                     </div>
                 </div>
+            </form>
+
+            <!-- ฟอร์มแยกสำหรับโค้ดส่วนลด -->
+            <form method="post" action="" style="margin-top: 20px; text-align: right;">
+                <input type="text" name="promo_code" 
+                       placeholder="ใส่รหัสส่วนลด" 
+                       value="<?= htmlspecialchars($promo['code'] ?? ''); ?>" required>
+                <button type="submit" name="apply_code" class="btn btn-primary">ใช้โค้ด</button>
             </form>
         <?php endif; ?>
     </div>
