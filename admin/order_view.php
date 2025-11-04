@@ -60,7 +60,7 @@ $items = mysqli_query($db, "
         <p><strong>ลูกค้า:</strong> <?= htmlspecialchars($order['fullname']) ?> (<?= htmlspecialchars($order['email']) ?>)</p>
         <p><strong>วันที่สั่งซื้อ:</strong> <?= $order['created_at'] ?></p>
         <p><strong>ยอดรวม:</strong> <?= number_format($order['total_price'], 2) ?> บาท</p>
-        <p><strong>สถานะปัจจุบัน:</strong> <?= htmlspecialchars($order['status']) ?></p>
+        <p><strong>สถานะปัจจุบัน:</strong> <?= htmlspecialchars(string: $order['status']) ?></p>
 
         <h3>รายการสินค้า</h3>
         <table border="1" cellpadding="6" cellspacing="0" width="100%">

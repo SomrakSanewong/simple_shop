@@ -52,8 +52,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` VARCHAR(100) NOT NULL UNIQUE,
   `password` VARCHAR(255) NOT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `role` ENUM('user', 'admin') DEFAULT 'user';
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;  
+  `role` ENUM('user', 'admin') DEFAULT 'user'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE `products` ADD COLUMN `stock` INT NOT NULL DEFAULT 0;
 
