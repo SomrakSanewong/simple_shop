@@ -1,7 +1,7 @@
 <?php
 include 'auth.php';
 
-// ✅ ลบรีวิว
+// ลบรีวิว
 if (isset($_GET['delete_id']) && is_numeric($_GET['delete_id'])) {
     $review_id = (int)$_GET['delete_id'];
     $stmt = mysqli_prepare($db, "DELETE FROM reviews WHERE id = ?");
@@ -11,7 +11,7 @@ if (isset($_GET['delete_id']) && is_numeric($_GET['delete_id'])) {
     exit;
 }
 
-// ✅ ดึงข้อมูลรีวิวทั้งหมด
+// ดึงข้อมูลรีวิวทั้งหมด
 $sql = "
     SELECT 
         r.id,
