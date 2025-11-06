@@ -9,6 +9,7 @@ body {
 
 .container {
   width: 80%;
+  max-width: 1200px; /* เพิ่ม max-width เพื่อความสวยงาม */
   margin: 20px auto;
   background: #fff;
   padding: 20px;
@@ -55,22 +56,35 @@ nav ul li a:hover {
   border: 1px solid #ddd;
   padding: 15px;
   text-align: center;
+  display: flex; /* ปรับเพื่อจัดเรียง action ไว้ด้านล่าง */
+  flex-direction: column;
+}
+
+.product-card .product-info {
+  flex-grow: 1; /* ทำให้ info ขยายเต็มที่ */
 }
 
 .product-card img {
   max-width: 100%;
   height: 150px;
   object-fit: cover;
+  margin-bottom: 10px;
 }
 
 .product-card h3 {
   margin-top: 10px;
+  margin-bottom: 5px;
 }
 
 .product-card .price {
   color: #888;
   font-size: 1.1em;
   font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.product-card .product-action {
+  margin-top: 15px;
 }
 
 .product-thumb {
@@ -79,9 +93,10 @@ nav ul li a:hover {
   height: auto;
   border: 1px solid #ddd;
   object-fit: cover;
+  vertical-align: middle; /* จัดกลางรูปในตาราง */
 }
 
-/* --- Admin Forms & Tables --- */
+/* --- Admin Forms & Tables & General Elements --- */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -122,11 +137,11 @@ td a.delete {
 .form-group input[type="number"],
 .form-group input[type="password"],
 .form-group textarea,
-.form-group select {
+.form-group select,
+.quantity-input { /* เพิ่ม .quantity-input */
   width: 100%;
   padding: 8px;
   box-sizing: border-box;
-  /* สำคัญมาก */
 }
 
 .btn {
@@ -138,6 +153,11 @@ td a.delete {
   cursor: pointer;
   text-decoration: none;
   font-size: 1em;
+  border-radius: 5px; /* เพิ่ม border-radius */
+}
+
+.btn:hover {
+  opacity: 0.9;
 }
 
 .btn-primary {
@@ -165,86 +185,71 @@ td a.delete {
   margin-bottom: 10px;
 }
 
-.product-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* Styles for Alerts */
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  margin-top: 20px;
+  position: relative; /* สำหรับจัดปุ่มปิด */
 }
 
-.box {
-  border: 1px solid #ccc;
-  padding: 5px;
-  border-radius: 5px;
+.alert-success {
+  color: #155724;
+  background-color: #d4edda;
+  border-color: #c3e6cb;
 }
 
-.search-box {
-  border: 1px solid #ccc;
-  padding: 4px;
-  border-radius: 5px;
-
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
 }
 
-.review-box {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 10px;
-  background: #f9f9f9;
-}
-
-.rating-number {
+/* ปุ่มปิด (X) ใน Alert */
+.alert .close {
+  float: right;
+  font-size: 1.5rem;
   font-weight: bold;
+  line-height: 1;
+  color: inherit; /* ให้สีตาม alert */
+  opacity: 0.7;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 15px;
+}
+
+/* Style สำหรับลิงก์ตะกร้าใน index.php/category.php */
+.cart-link-wrapper {
+  text-align: right;
+  margin-bottom: 15px;
+}
+
+.cart-link {
+  font-weight: bold;
+  text-decoration: none;
   color: #333;
 }
 
-.avg-box {
-  background: #f0f0f0;
-  padding: 8px;
-  border-radius: 5px;
-  margin-bottom: 15px;
+/* Style สำหรับสรุปตะกร้าใน cart_view.php */
+.cart-summary {
+  text-align: right;
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid #ddd;
 }
 
-textarea {
-  width: 100%;
-  max-width: 500px;
+/* เพิ่มระยะห่างระหว่างปุ่มใน cart_view.php */
+.cart-summary .btn {
+  margin-left: 10px;
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-  margin-bottom: 25px;
-}
-
-.card {
-  background: #f8f8f8;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.form-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 15px;
-}
-
-.form-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group label {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.form-group input,
-.form-group select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+/* Style สำหรับปุ่ม Checkout สีเขียว */
+.btn-checkout {
+  background-color: #28a745;
+  border-color: #28a745;
 }

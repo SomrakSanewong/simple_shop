@@ -1,101 +1,79 @@
 <?php
-include 'db.php';
+// index.php
+include 'db.php'; 
 
-// ดึงข้อมูลหมวดหมู่ทั้งหมดสำหรับเมนู
+// --- โค้ดสำหรับนับจำนวนสินค้าในตะกร้า (ยุบเหลือ 3 บรรทัด) ---
+$cart_item_count = 0;
+if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) $cart_item_count = array_sum($_SESSION['cart']); 
+// ------------------------------------
+
+// ดึงข้อมูลหมวดหมู่และสินค้า
 $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
-
-$sort = $_GET['sort'] ?? '';
-$order_sql = 'ORDER BY p.name ASC';
-
-switch ($sort) {
-    case 'price_asc':
-        $order_sql = 'ORDER BY p.price ASC';
-        break;
-    case 'price_desc':
-        $order_sql = 'ORDER BY p.price DESC';
-        break;
-    case 'name_desc':
-        $order_sql = 'ORDER BY p.name DESC';
-        break;
-    case 'name_asc':
-    default:
-        $order_sql = 'ORDER BY p.name ASC';
-        break;
-}
-
-$sql = "SELECT 
-            p.*, 
-            c.name AS category_name,
-            ROUND(AVG(r.rating),1) AS avg_rating,
-            COUNT(r.id) AS review_count
-        FROM products p
-        JOIN categories c ON p.category_id = c.id
-        LEFT JOIN reviews r ON p.id = r.product_id
-        GROUP BY p.id
-        $order_sql";
-
-$products_result = mysqli_query($db, $sql);
+$products_result = mysqli_query($db, "SELECT p.*, c.name AS category_name FROM products p JOIN categories c ON p.category_id = c.id ORDER BY p.name");
 ?>
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Simple Shop</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Simple Shop</title>
+<link rel="stylesheet" href="style.css?v=1.9"> 
 </head>
-
 <body>
-    <?php include 'frontend_nav.php'; ?>
+<?php include 'frontend_nav.php'; ?>
 
-    <div class="container">
-        <div class="product-header">
-            <h2>All Products</h2>
-
-            <form method="get" style="margin:0">
-                <label>จัดเรียงตาม:</label>
-                <select class="box" name="sort" onchange="this.form.submit()">
-                    <option value="name_asc" <?= $sort == 'name_asc' ? 'selected' : '' ?>>ชื่อ (A-Z)</option>
-                    <option value="name_desc" <?= $sort == 'name_desc' ? 'selected' : '' ?>>ชื่อ (Z-A)</option>
-                    <option value="price_asc" <?= $sort == 'price_asc' ? 'selected' : '' ?>>ราคาน้อยไปมาก</option>
-                    <option value="price_desc" <?= $sort == 'price_desc' ? 'selected' : '' ?>>ราคามากไปน้อย</option>
-                </select>
-            </form>
+<div class="container">
+    <?php // --- โค้ดแสดง Alert (ยุบเหลือ 5 บรรทัด) ---
+    if (isset($_SESSION['notification'])):
+        list($type, $message) = explode('|', $_SESSION['notification'], 2);
+        $alert_class = ($type == 'success') ? 'alert-success' : 'alert-danger'; ?>
+        <div class="alert <?= $alert_class ?>" role="alert">
+            <?= htmlspecialchars($message) ?>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         </div>
+        <?php unset($_SESSION['notification']);
+    endif;
+    // -------------------------------------------------------- ?>
 
+    <p class="cart-link-wrapper"><a href="cart_view.php" class="cart-link">🛒 View Cart (<?= $cart_item_count ?>)</a></p>
 
-        <div class="product-grid">
-            <?php while ($product = mysqli_fetch_assoc($products_result)): ?>
-                <div class="product-card">
-                    <a href="product_view.php?id=<?= $product['id']; ?>">
-                        <img src="<?= htmlspecialchars($product['image_url']); ?>"
-                            alt="<?= htmlspecialchars($product['name']); ?>">
-                    </a>
-
-                    <h3>
-                        <a href="product_view.php?id=<?= $product['id']; ?>">
-                            <?= htmlspecialchars($product['name']); ?>
-                        </a>
-                    </h3>
-                    <?php if ($product['review_count'] > 0): ?>
-                        <p>คะแนนเฉลี่ย: <?= $product['avg_rating']; ?>/5 (<?= $product['review_count']; ?> รีวิว)</p>
-                    <?php else: ?>
-                        <p>ยังไม่มีรีวิว</p>
-                    <?php endif; ?>
-                    <p class="price"><?php echo number_format($product['price'], 2); ?> THB</p>
-                    <p><small>Category: <?php echo htmlspecialchars($product['category_name']); ?></small></p>
-                    <p><?php echo htmlspecialchars($product['description']); ?></p>
-
+    <h2>All Products</h2>
+    <div class="product-grid">
+    <?php while ($product = mysqli_fetch_assoc($products_result)): ?>
+        <div class="product-card">
+            <div class="product-info"> 
+                <img src="<?= htmlspecialchars($product['image_url']) ?>" alt="<?= htmlspecialchars($product['name']) ?>">
+                <h3><?= htmlspecialchars($product['name']) ?></h3>
+                <p class="price"><?= number_format($product['price'], 2) ?> THB</p>
+                <p><small>Category: <?= htmlspecialchars($product['category_name']) ?></small></p>
+                <p><?= htmlspecialchars($product['description']) ?></p>
+            </div>
+            
+            <div class="product-action">
+                <?php if ($product['stock'] > 0): ?>
                     <form action="cart_process.php" method="POST">
-                        <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
-                        <input type="number" name="quantity" value="1" min="1"
-                            max="<?php echo $product['stock']; ?>" style="width: 60px;">
-                        <button type="submit" name="add_to_cart" class="btn">Add to Cart</button>
+                        <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
+                        <input type="hidden" name="quantity" value="1">
+                        <input type="hidden" name="action" value="add_to_cart"> 
+                        <button type="submit" class="btn btn-primary">🛒 Add</button>
                     </form>
-                </div>
-            <?php endwhile; ?>
+                <?php else: ?>
+                    <button type="button" class="btn btn-secondary" disabled>🚫 Out of Stock</button>
+                <?php endif; ?>
+            </div>
         </div>
+    <?php endwhile; ?>
     </div>
-</body>
+</div>
 
+<script>
+// Script นี้ใช้สำหรับปิด Alert 
+var closeButtons = document.querySelectorAll('[data-dismiss="alert"]');
+closeButtons.forEach(function(button) {
+    button.addEventListener('click', function() {
+        var alertElement = this.closest('.alert');
+        if (alertElement) alertElement.style.display = 'none';
+    });
+});
+</script>
+</body>
 </html>

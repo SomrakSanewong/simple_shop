@@ -1,195 +1,109 @@
 <?php
-session_start();
-include 'db.php';
+include 'db.php'; 
+
+// --- โค้ดสำหรับนับจำนวนสินค้าในตะกร้า ---
+$cart_item_count = 0;
+if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) $cart_item_count = array_sum($_SESSION['cart']); 
+// ------------------------------------
 
 $cart_products = [];
 $total_price = 0;
-$discount = 0;
-$promo = null;
-$message = "";
 
-// โหลดข้อมูลสินค้าในตะกร้า
 if (!empty($_SESSION['cart'])) {
-    $ids = array_map('intval', array_keys($_SESSION['cart']));
-    $id_list = implode(',', $ids);
+    $product_ids = array_keys($_SESSION['cart']);
+    $id_list_string = implode(',', array_map('intval', $product_ids)); 
+    $result = mysqli_query($db, "SELECT * FROM products WHERE id IN ($id_list_string)");
+    
+    $products_db = [];
+    while ($row = mysqli_fetch_assoc($result)) $products_db[$row['id']] = $row;
 
-    $sql = "SELECT * FROM products WHERE id IN ($id_list)";
-    $result = mysqli_query($db, $sql);
-
-    while ($row = mysqli_fetch_assoc($result)) {
-        $cart_products[] = $row;
+    foreach ($_SESSION['cart'] as $product_id => $quantity) {
+        if (isset($products_db[$product_id])) {
+            $product = $products_db[$product_id];
+            $subtotal = $product['price'] * $quantity;
+            $total_price += $subtotal;
+            $cart_products[] = ['id' => $product_id, 'name' => $product['name'], 'image_url' => $product['image_url'], 'price' => $product['price'], 'stock' => $product['stock'], 'quantity' => $quantity, 'subtotal' => $subtotal];
+        } else {
+            unset($_SESSION['cart'][$product_id]);
+        }
     }
-}
-
-$categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
-
-// ตรวจสอบโค้ดส่วนลด
-if (isset($_POST['apply_code'])) {
-    $code = trim($_POST['promo_code']);
-    $stmt = mysqli_prepare($db, "
-        SELECT * FROM promotions 
-        WHERE code = ? 
-          AND status = 'Active' 
-          AND expiry_date >= CURDATE()
-        LIMIT 1
-    ");
-    mysqli_stmt_bind_param($stmt, "s", $code);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $promo = mysqli_fetch_assoc($result);
-
-    if ($promo) {
-        $_SESSION['promo'] = $promo;
-        $message = "ใช้โค้ดส่วนลดสำเร็จ: " . htmlspecialchars($promo['code']);
-    } else {
-        unset($_SESSION['promo']);
-        $message = "โค้ดส่วนลดไม่ถูกต้อง หรือหมดอายุแล้ว";
-    }
-}
-
-// โหลดโค้ดส่วนลดจาก Session ถ้ามี
-if (!empty($_SESSION['promo'])) {
-    $promo = $_SESSION['promo'];
 }
 ?>
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
-    <meta charset="UTF-8">
-    <title>ตะกร้าสินค้า</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Shopping Cart</title>
+<link rel="stylesheet" href="style.css?v=1.9"> 
 </head>
-
 <body>
-    <?php include 'frontend_nav.php'; ?>
+<?php include 'frontend_nav.php'; ?>
 
-    <div class="container">
-        <h2>ตะกร้าสินค้า</h2>
+<div class="container">
 
-        <?php if (!empty($message)): ?>
-            <p style="color:<?= (strpos($message, 'สำเร็จ') !== false) ? 'green' : 'red'; ?>;">
-                <?= $message; ?>
-            </p>
-        <?php endif; ?>
+    <?php // --- โค้ดแสดง Alert (ยุบเหลือ 5 บรรทัด) ---
+    if (isset($_SESSION['notification'])):
+        list($type, $message) = explode('|', $_SESSION['notification'], 2);
+        $alert_class = ($type == 'success') ? 'alert-success' : 'alert-danger'; ?>
+        <div class="alert <?= $alert_class ?>" role="alert">
+            <?= htmlspecialchars($message) ?>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <?php unset($_SESSION['notification']);
+    endif; ?>
 
-        <?php if (!empty($_SESSION['cart_error'])): ?>
-            <div style="color:red; margin-bottom:10px;">
-                <?php 
-                foreach ($_SESSION['cart_error'] as $msg) {
-                    echo htmlspecialchars($msg) . "<br>";
-                }
-                unset($_SESSION['cart_error']);
-                ?>
+    <h2>Your Shopping Cart</h2>
+
+    <?php if (empty($cart_products)): ?>
+        <p>Your cart is empty.</p>
+        <a href="index.php" class="btn btn-primary">Continue Shopping</a>
+    <?php else: ?>
+        
+        <form action="cart_process.php" method="POST">
+            <table>
+                <thead>
+                    <tr><th>Product</th><th>Price</th><th>Quantity (Stock)</th><th>Subtotal</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($cart_products as $item): ?>
+                    <tr>
+                        <td>
+                            <img src="<?= htmlspecialchars($item['image_url']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" class="product-thumb">
+                            <br> <?= htmlspecialchars($item['name']) ?>
+                        </td>
+                        <td><?= number_format($item['price'], 2) ?></td>
+                        <td>
+                            <input type="number" name="quantities[<?= $item['id'] ?>]" value="<?= $item['quantity'] ?>" min="0" max="<?= $item['stock'] ?>" class="quantity-input" style="width: 80px;">
+                            <small>(Max: <?= $item['stock'] ?>)</small>
+                        </td>
+                        <td><?= number_format($item['subtotal'], 2) ?></td>
+                        <td><a href="cart_process.php?action=remove_from_cart&id=<?= $item['id'] ?>" class="delete" onclick="return confirm('Are you sure you want to remove this item?');">Delete</a></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <div class="cart-summary">
+                <h3>Total Price: <?= number_format($total_price, 2) ?> THB</h3>
+                
+                <button type="submit" name="action" value="update_cart" class="btn btn-secondary">Update Cart</button>
+                <button type="submit" name="action" value="proceed_to_checkout" class="btn btn-primary btn-checkout">Proceed to Checkout</button>
             </div>
-        <?php endif; ?>
+        </form>
 
-        <?php if (empty($cart_products)): ?>
-            <p>ตะกร้าว่างเปล่า</p>
-            <p><a href="index.php" class="btn">กลับไปเลือกซื้อสินค้า</a></p>
-        <?php else: ?>
-            <form action="cart_process.php" method="post">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>สินค้า</th>
-                            <th>ราคา</th>
-                            <th>จำนวน</th>
-                            <th>รวม</th>
-                            <th>ลบ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($cart_products as $product): ?>
-                            <?php
-                            $id = $product['id'];
-                            $quantity = (int)($_SESSION['cart'][$id] ?? 1);
-                            $price = (float)$product['price'];
-                            $stock = (int)$product['stock'];
+    <?php endif; ?>
 
-                            if (!empty($_SESSION['cart_outofstock'][$id])) {
-                                $subtotal = 0;
-                            } else {
-                                $subtotal = $price * $quantity;
-                                $total_price += $subtotal;
-                            }
-                            ?>
-                            <tr>
-                                <td><?= htmlspecialchars($product['name']); ?></td>
-                                <td><?= number_format($price, 2); ?></td>
-                                <td>
-                                    <?php if (!empty($_SESSION['cart_outofstock'][$id])): ?>
-                                        <span style="color:red;">สินค้าหมด</span>
-                                    <?php else: ?>
-                                        <input type="number" name="quantities[<?= $id; ?>]" 
-                                               value="<?= $quantity; ?>" min="1"
-                                               style="width:60px; text-align:center;">
-                                    <?php endif; ?>
-                                </td>
-                                <td><?= number_format($subtotal, 2); ?></td>
-                                <td>
-                                    <a href="cart_process.php?remove=<?= $id; ?>" 
-                                       class="btn btn-danger"
-                                       onclick="return confirm('ลบสินค้านี้ออกจากตะกร้า?');">ลบ</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
+</div>
 
-                    <?php
-                    // คำนวณส่วนลด
-                    if ($promo) {
-                        if ($promo['type'] === 'fixed') {
-                            $discount = min($promo['value'], $total_price);
-                        } elseif ($promo['type'] === 'percentage') {
-                            $discount = ($total_price * $promo['value']) / 100;
-                        }
-                    }
-                    $final_total = $total_price - $discount;
-                    ?>
-
-                    <tfoot>
-                        <tr>
-                            <th colspan="3" style="text-align:center;">ยอดรวมทั้งหมด:</th>
-                            <th><?= number_format($total_price, 2); ?></th>
-                            <th></th>
-                        </tr>
-
-                        <?php if ($promo): ?>
-                            <tr>
-                                <th colspan="3" style="text-align:center;">ส่วนลด (<?= htmlspecialchars($promo['code']); ?>):</th>
-                                <th>-<?= number_format($discount, 2); ?></th>
-                                <th></th>
-                            </tr>
-                            <tr>
-                                <th colspan="3" style="text-align:center;">ยอดสุทธิหลังหักส่วนลด:</th>
-                                <th><?= number_format($final_total, 2); ?></th>
-                                <th></th>
-                            </tr>
-                        <?php endif; ?>
-                    </tfoot>
-                </table>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
-                    <a href="cart_process.php?clear=1"
-                       class="btn btn-danger"
-                       onclick="return confirm('ล้างตะกร้าทั้งหมดหรือไม่?');">ล้างตะกร้า</a>
-
-                    <div>
-                        <button type="submit" name="update_cart" class="btn btn-secondary">อัปเดตจำนวนสินค้า</button>
-                        <a href="checkout.php" class="btn">ดำเนินการสั่งซื้อ</a>
-                    </div>
-                </div>
-            </form>
-
-            <!-- ฟอร์มแยกสำหรับโค้ดส่วนลด -->
-            <form method="post" action="" style="margin-top: 20px; text-align: right;">
-                <input type="text" name="promo_code" 
-                       placeholder="ใส่รหัสส่วนลด" 
-                       value="<?= htmlspecialchars($promo['code'] ?? ''); ?>" required>
-                <button type="submit" name="apply_code" class="btn btn-primary">ใช้โค้ด</button>
-            </form>
-        <?php endif; ?>
-    </div>
+<script>
+// Script นี้ใช้สำหรับปิด Alert 
+var closeButtons = document.querySelectorAll('[data-dismiss="alert"]');
+closeButtons.forEach(function(button) {
+    button.addEventListener('click', function() {
+        var alertElement = this.closest('.alert');
+        if (alertElement) alertElement.style.display = 'none';
+    });
+});
+</script>
 </body>
 </html>
