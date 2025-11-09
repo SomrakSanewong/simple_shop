@@ -93,36 +93,44 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
                 ");
                     ?>
                     <table>
-                        <tr>
-                            <th>สินค้า</th>
-                            <th>จำนวน</th>
-                            <th>ราคา</th>
-                            <th>รวม</th>
-                            <th>รีวิว</th>
-                        </tr>
-                        <?php while ($item = mysqli_fetch_assoc($items)): ?>
-                            <?php
-                            // ตรวจสอบว่าเคยรีวิวแล้วหรือยัง
-                            $check_review = mysqli_prepare($db, "SELECT id FROM reviews WHERE product_id = ? AND user_id = ?");
-                            mysqli_stmt_bind_param($check_review, "ii", $item['product_id'], $user_id);
-                            mysqli_stmt_execute($check_review);
-                            $review_result = mysqli_stmt_get_result($check_review);
-                            $already_reviewed = mysqli_num_rows($review_result) > 0;
-                            ?>
+                        <thead>
                             <tr>
-                                <td><?= htmlspecialchars($item['name']) ?></td>
-                                <td><?= $item['quantity'] ?></td>
-                                <td><?= number_format($item['price'], 2) ?></td>
-                                <td><?= number_format($item['price'] * $item['quantity'], 2) ?></td>
-                                <td>
-                                    <?php if ($already_reviewed): ?>
-                                        <span class="reviewed">รีวิวแล้ว</span>
-                                    <?php else: ?>
-                                        <a href="product_view.php?id=<?= $item['product_id']; ?>" class="btn-review">รีวิวสินค้า</a>
-                                    <?php endif; ?>
-                                </td>
+                                <th>สินค้า</th>
+                                <th>จำนวน</th>
+                                <th>ราคาต่อหน่วย</th> 
+                                <th>รีวิว</th>
                             </tr>
-                        <?php endwhile; ?>
+                        </thead>
+                        <tbody>
+                            <?php while ($item = mysqli_fetch_assoc($items)): ?>
+                                <?php
+                                // ตรวจสอบว่าเคยรีวิวแล้วหรือยัง
+                                $check_review = mysqli_prepare($db, "SELECT id FROM reviews WHERE product_id = ? AND user_id = ?");
+                                mysqli_stmt_bind_param($check_review, "ii", $item['product_id'], $user_id);
+                                mysqli_stmt_execute($check_review);
+                                $review_result = mysqli_stmt_get_result($check_review);
+                                $already_reviewed = mysqli_num_rows($review_result) > 0;
+                                ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($item['name']) ?></td>
+                                    <td><?= $item['quantity'] ?></td>
+                                    <td><?= number_format($item['price'], 2) ?></td>
+                                    <td>
+                                        <?php if ($already_reviewed): ?>
+                                            <span class="reviewed">รีวิวแล้ว</span>
+                                        <?php else: ?>
+                                            <a href="product_view.php?id=<?= $item['product_id']; ?>" class="btn-review">รีวิวสินค้า</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" style="text-align:right; font-weight:bold; background:#f0f0f0;">ยอดรวมสุทธิ:</td>
+                                <td style="font-weight:bold; background:#f0f0f0;"><?= number_format($order['total_price'], 2) ?> บาท</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             <?php endwhile; ?>
