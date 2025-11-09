@@ -1,17 +1,13 @@
 <?php
 include 'db.php';
-
-// ตรวจสอบว่ามี id ของหมวดหมู่ส่งมาหรือไม่
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header("location: index.php");
     exit;
 }
 $category_id = (int)$_GET['id'];
 
-// ดึงข้อมูลหมวดหมู่ทั้งหมดสำหรับเมนู
 $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
 
-// ดึงชื่อหมวดหมู่ที่เลือก
 $cat_stmt = mysqli_prepare($db, "SELECT name FROM categories WHERE id = ?");
 mysqli_stmt_bind_param($cat_stmt, "i", $category_id);
 mysqli_stmt_execute($cat_stmt);
@@ -23,7 +19,6 @@ if (!$category_info) {
 }
 $category_name = $category_info['name'];
 
-// รับค่าการจัดเรียง
 $sort = $_GET['sort'] ?? '';
 $order_sql = "ORDER BY p.name ASC";
 switch ($sort) {
@@ -42,7 +37,6 @@ switch ($sort) {
         break;
 }
 
-//ดึงข้อมูลสินค้าในหมวดหมู่ พร้อมคะแนนเฉลี่ย
 $sql = "
     SELECT 
         p.*, 
