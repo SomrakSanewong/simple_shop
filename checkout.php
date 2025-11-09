@@ -2,6 +2,11 @@
 session_start();
 include 'db.php';
 
+// === โค้ดที่เพิ่ม/แก้ไข: ประกาศตัวแปรส่วนลด ===
+$promo = null;
+$discount = 0;
+// ======================================
+
 // ต้องล็อกอินก่อน
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -38,12 +43,32 @@ while ($row = mysqli_fetch_assoc($result)) {
     ];
 }
 
+// === โค้ดที่เพิ่ม: ตรรกะคำนวณส่วนลด ===
+if (isset($_SESSION['promo'])) {
+    $promo = $_SESSION['promo'];
+    $original_total = $total_price; // เก็บยอดรวมก่อนหักส่วนลดไว้
+    
+    if ($promo['type'] === 'fixed') {
+        // ส่วนลดแบบคงที่ (บาท)
+        $discount = min($promo['value'], $original_total);
+    } elseif ($promo['type'] === 'percentage') {
+        // ส่วนลดแบบเปอร์เซ็นต์
+        $discount = ($original_total * $promo['value']) / 100;
+    }
+    
+    // สำคัญ: หักส่วนลดออกจากยอดรวมที่จะบันทึกลง DB
+    $total_price -= $discount;
+}
+// ======================================
+
+
 // เมื่อกดยืนยันคำสั่งซื้อ
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     mysqli_begin_transaction($db);
     try {
         // บันทึกคำสั่งซื้อหลัก
         $stmt = $db->prepare("INSERT INTO orders (user_id, total_price) VALUES (?, ?)");
+        // $total_price ที่ใช้ตรงนี้คือยอดสุทธิหลังหักส่วนลดแล้ว
         $stmt->bind_param("id", $user_id, $total_price);
         $stmt->execute();
         $order_id = $stmt->insert_id;
@@ -57,6 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // ตัด stock
             $new_stock = $p['quantity'] * -1;
             mysqli_query($db, "UPDATE products SET stock = stock + $new_stock WHERE id = {$p['id']}");
+        }
+
+        // ลบโค้ดส่วนลดออกจาก Session หลังสั่งซื้อสำเร็จ
+        if (isset($_SESSION['promo'])) {
+            unset($_SESSION['promo']); 
         }
 
         mysqli_commit($db);
@@ -97,7 +127,10 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($products as $p): ?>
+                <?php 
+                // เนื่องจาก $total_price ถูกหักส่วนลดไปแล้ว เราจะคำนวณยอดรวมก่อนส่วนลดสำหรับการแสดงผล
+                $total_before_discount = $total_price + $discount; 
+                foreach ($products as $p): ?>
                     <tr>
                         <td><?= htmlspecialchars($p['name']) ?></td>
                         <td><?= number_format($p['price'], 2) ?> บาท</td>
@@ -106,13 +139,24 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
                     </tr>
                 <?php endforeach; ?>
             </tbody>
+            
             <tfoot>
                 <tr>
-                    <th colspan="3" style="text-align:right;">ยอดรวมทั้งหมด:</th>
+                    <th colspan="3" style="text-align:right;">ยอดรวม (ก่อนส่วนลด):</th>
+                    <th><?= number_format($total_before_discount, 2) ?> บาท</th>
+                </tr>
+                <?php if ($discount > 0): ?>
+                <tr>
+                    <th colspan="3" style="text-align:right;">ส่วนลด (<?= htmlspecialchars($promo['code']) ?>):</th>
+                    <th>-<?= number_format($discount, 2) ?> บาท</th>
+                </tr>
+                <?php endif; ?>
+                <tr>
+                    <th colspan="3" style="text-align:right;">ยอดสุทธิทั้งหมด:</th>
                     <th><?= number_format($total_price, 2) ?> บาท</th>
                 </tr>
             </tfoot>
-        </table>
+            </table>
 
         <form method="post" style="margin-top:20px;">
             <a href="cart_view.php" class="btn btn-danger">กลับไปแก้ไขตะกร้า</a>
