@@ -11,13 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'];
 
     if ($id) {
-        
+     
         $stmt = mysqli_prepare($db, "UPDATE promotions SET code=?, type=?, value=?, expiry_date=?, status=? WHERE id=?");
         mysqli_stmt_bind_param($stmt, "ssdssi", $code, $type, $value, $expiry_date, $status, $id);
         mysqli_stmt_execute($stmt);
         $msg = "อัปเดตข้อมูลเรียบร้อยแล้ว";
     } else {
-      
+     
         $stmt = mysqli_prepare($db, "INSERT INTO promotions (code, type, value, expiry_date, status) VALUES (?, ?, ?, ?, ?)");
         mysqli_stmt_bind_param($stmt, "ssdss", $code, $type, $value, $expiry_date, $status);
         mysqli_stmt_execute($stmt);
@@ -85,7 +85,7 @@ $result = mysqli_query($db, "SELECT * FROM promotions ORDER BY id DESC");
                 </div>
             </div>
 
-            
+       
             <div class="form-row bottom-row">
                 <div class="form-group">
                     <label>วันหมดอายุ:</label>
