@@ -2,7 +2,7 @@
 session_start();
 include 'db.php';
 
-// ต้องล็อกอินก่อน
+
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
     exit;
@@ -10,7 +10,7 @@ if (!isset($_SESSION['user'])) {
 
 $user_id = $_SESSION['user']['id'];
 
-// ดึงคำสั่งซื้อของผู้ใช้
+
 $sql = "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC";
 $stmt = $db->prepare($sql);
 $stmt->bind_param("i", $user_id);
@@ -84,7 +84,7 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
                     สถานะปัจจุบัน:<?= htmlspecialchars(string: $order['status']) ?><br><br>
 
                     <?php
-                    // ดึงสินค้าในคำสั่งซื้อ
+                    
                     $items = mysqli_query($db, "
                     SELECT p.id AS product_id, p.name, oi.quantity, oi.price 
                     FROM order_items oi 
@@ -104,7 +104,7 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
                         <tbody>
                             <?php while ($item = mysqli_fetch_assoc($items)): ?>
                                 <?php
-                                // ตรวจสอบว่าเคยรีวิวแล้วหรือยัง
+                                
                                 $check_review = mysqli_prepare($db, "SELECT id FROM reviews WHERE product_id = ? AND user_id = ?");
                                 mysqli_stmt_bind_param($check_review, "ii", $item['product_id'], $user_id);
                                 mysqli_stmt_execute($check_review);

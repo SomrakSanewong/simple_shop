@@ -8,7 +8,7 @@ $discount = 0;
 $promo = null;
 $message = "";
 
-// โหลดข้อมูลสินค้าในตะกร้า
+
 if (!empty($_SESSION['cart'])) {
     $ids = array_map('intval', array_keys($_SESSION['cart']));
     $id_list = implode(',', $ids);
@@ -23,7 +23,7 @@ if (!empty($_SESSION['cart'])) {
 
 $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
 
-// ตรวจสอบโค้ดส่วนลด
+
 if (isset($_POST['apply_code'])) {
     $code = trim($_POST['promo_code']);
     $stmt = mysqli_prepare($db, "
@@ -47,7 +47,7 @@ if (isset($_POST['apply_code'])) {
     }
 }
 
-// โหลดโค้ดส่วนลดจาก Session ถ้ามี
+
 if (!empty($_SESSION['promo'])) {
     $promo = $_SESSION['promo'];
 }
@@ -137,7 +137,7 @@ if (!empty($_SESSION['promo'])) {
                     </tbody>
 
                     <?php
-                    // คำนวณส่วนลด
+                 
                     if ($promo) {
                         if ($promo['type'] === 'fixed') {
                             $discount = min($promo['value'], $total_price);
@@ -182,7 +182,7 @@ if (!empty($_SESSION['promo'])) {
                 </div>
             </form>
 
-            <!-- ฟอร์มแยกสำหรับโค้ดส่วนลด -->
+          
             <form method="post" action="" style="margin-top: 20px; text-align: right;">
                 <input type="text" name="promo_code" 
                        placeholder="ใส่รหัสส่วนลด" 

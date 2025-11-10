@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mysqli_stmt_execute($stmt);
         $msg = "อัปเดตข้อมูลเรียบร้อยแล้ว";
     } else {
-        
+      
         $stmt = mysqli_prepare($db, "INSERT INTO promotions (code, type, value, expiry_date, status) VALUES (?, ?, ?, ?, ?)");
         mysqli_stmt_bind_param($stmt, "ssdss", $code, $type, $value, $expiry_date, $status);
         mysqli_stmt_execute($stmt);
@@ -64,6 +64,7 @@ $result = mysqli_query($db, "SELECT * FROM promotions ORDER BY id DESC");
             <h3><?= $edit_promo ? 'แก้ไขโค้ดส่วนลด #' . $edit_promo['id'] : 'เพิ่มโค้ดส่วนลดใหม่'; ?></h3>
             <input type="hidden" name="id" value="<?= $edit_promo['id'] ?? ''; ?>">
 
+           
             <div class="form-row top-row">
                 <div class="form-group">
                     <label>รหัสโค้ด:</label>
@@ -84,6 +85,7 @@ $result = mysqli_query($db, "SELECT * FROM promotions ORDER BY id DESC");
                 </div>
             </div>
 
+            
             <div class="form-row bottom-row">
                 <div class="form-group">
                     <label>วันหมดอายุ:</label>

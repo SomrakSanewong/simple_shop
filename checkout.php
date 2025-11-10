@@ -2,18 +2,18 @@
 session_start();
 include 'db.php';
 
-// === โค้ดที่เพิ่ม/แก้ไข: ประกาศตัวแปรส่วนลด ===
+
 $promo = null;
 $discount = 0;
-// ======================================
 
-// ต้องล็อกอินก่อน
+
+
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
     exit;
 }
 
-// ต้องมีสินค้าก่อน
+
 if (empty($_SESSION['cart'])) {
     header("Location: cart_view.php");
     exit;
@@ -21,7 +21,7 @@ if (empty($_SESSION['cart'])) {
 
 $user_id = $_SESSION['user']['id'];
 
-// ดึงข้อมูลสินค้าจากฐานข้อมูล
+
 $cart = $_SESSION['cart'];
 $ids = implode(',', array_map('intval', array_keys($cart)));
 $sql = "SELECT id, name, price, stock FROM products WHERE id IN ($ids)";
@@ -43,54 +43,54 @@ while ($row = mysqli_fetch_assoc($result)) {
     ];
 }
 
-// === โค้ดที่เพิ่ม: ตรรกะคำนวณส่วนลด ===
+
 if (isset($_SESSION['promo'])) {
     $promo = $_SESSION['promo'];
-    $original_total = $total_price; // เก็บยอดรวมก่อนหักส่วนลดไว้
+    $original_total = $total_price; 
     
     if ($promo['type'] === 'fixed') {
-        // ส่วนลดแบบคงที่ (บาท)
+        
         $discount = min($promo['value'], $original_total);
     } elseif ($promo['type'] === 'percentage') {
-        // ส่วนลดแบบเปอร์เซ็นต์
+        
         $discount = ($original_total * $promo['value']) / 100;
     }
     
-    // สำคัญ: หักส่วนลดออกจากยอดรวมที่จะบันทึกลง DB
+    
     $total_price -= $discount;
 }
-// ======================================
 
 
-// เมื่อกดยืนยันคำสั่งซื้อ
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     mysqli_begin_transaction($db);
     try {
-        // บันทึกคำสั่งซื้อหลัก
+ 
         $stmt = $db->prepare("INSERT INTO orders (user_id, total_price) VALUES (?, ?)");
-        // $total_price ที่ใช้ตรงนี้คือยอดสุทธิหลังหักส่วนลดแล้ว
+        
         $stmt->bind_param("id", $user_id, $total_price);
         $stmt->execute();
         $order_id = $stmt->insert_id;
 
-        // เพิ่มรายการสินค้าแต่ละชิ้น
+       
         $stmt_item = $db->prepare("INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)");
         foreach ($products as $p) {
             $stmt_item->bind_param("iiid", $order_id, $p['id'], $p['quantity'], $p['price']);
             $stmt_item->execute();
 
-            // ตัด stock
+           
             $new_stock = $p['quantity'] * -1;
             mysqli_query($db, "UPDATE products SET stock = stock + $new_stock WHERE id = {$p['id']}");
         }
 
-        // ลบโค้ดส่วนลดออกจาก Session หลังสั่งซื้อสำเร็จ
+        
         if (isset($_SESSION['promo'])) {
             unset($_SESSION['promo']); 
         }
 
         mysqli_commit($db);
-        unset($_SESSION['cart']); // ล้างตะกร้า
+        unset($_SESSION['cart']); 
         header("Location: my_orders.php?success=1");
         exit;
     } catch (Exception $e) {
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("เกิดข้อผิดพลาด: " . $e->getMessage());
     }
 }
-// ดึงข้อมูลหมวดหมู่ทั้งหมดสำหรับเมนู
+
 $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
 ?>
 
@@ -128,7 +128,7 @@ $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name")
             </thead>
             <tbody>
                 <?php 
-                // เนื่องจาก $total_price ถูกหักส่วนลดไปแล้ว เราจะคำนวณยอดรวมก่อนส่วนลดสำหรับการแสดงผล
+               
                 $total_before_discount = $total_price + $discount; 
                 foreach ($products as $p): ?>
                     <tr>
