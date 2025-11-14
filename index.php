@@ -1,7 +1,6 @@
 <?php
 include 'db.php';
 
-// ดึงข้อมูลหมวดหมู่ทั้งหมดสำหรับเมนู
 $categories_result = mysqli_query($db, "SELECT * FROM categories ORDER BY name");
 
 $sort = $_GET['sort'] ?? '';
